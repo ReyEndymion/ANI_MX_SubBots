@@ -286,16 +286,16 @@ auth: {
 creds: state.creds,
 keys: makeCacheableSignalKeyStore(state.keys, logger),
 },
-browser: ['ANI MX SCANS','Edge','1.0.0'],
+browser: ['Ubuntu','Chrome (ANIMXSCANS)','20.0.04'],
 version,
 defaultQueryTimeoutMs: undefined,
 };
 
 if (global.conns instanceof Array) {console.log()} else {global.conns = []}
-global.conn = makeWASocket(connectionOptions)
+let conn = makeWASocket(connectionOptions)
 conn.isInit = false;
 conn.well = false;
-loadDatabase(global.conn);
+loadDatabase(conn);
 const botJid = state.creds.me.jid.split('@')[0]
 const botDirRespald = path.join(global.authFolderRespald, botJid)
 
@@ -422,7 +422,7 @@ await wait(CLOSE_CHECK_INTERVAL);
 if (connection == 'open') {
 conn.isInit = true
 global.conns.push(conn)
-console.log(chalk.yellow(`▣─────────────────────────────···\n│\n│❧ ${botJid}CONECTADO CORRECTAMENTE AL WHATSAPP ✅\n│\n▣─────────────────────────────···`))
+console.log(chalk.yellow(`▣─────────────────────────────···\n│\n│❧ ${botJid} CONECTADO CORRECTAMENTE AL WHATSAPP ✅\n│\n▣─────────────────────────────···`))
 if (update.receivedPendingNotifications) { 
 waitTwoMinutes()
 return conn.groupAcceptInvite('HbC4vaYsvYi0Q3i38diybA');
@@ -453,12 +453,12 @@ if (Object.keys(Handler || {}).length) handler = Handler;
 console.error(e);
 }
 if (restatConn) {
-const oldChats = global.conn.chats;
+const oldChats = conn.chats;
 try {
-global.conn.ws.close();
+conn.ws.close();
 } catch { }
 conn.ev.removeAllListeners();
-global.conn = makeWASocket(connectionOptions, { chats: oldChats });
+conn = makeWASocket(connectionOptions, { chats: oldChats });
 isInit = true;
 }
 if (!isInit) {
@@ -471,13 +471,13 @@ conn.ev.off('connection.update', conn.connectionUpdate);
 conn.ev.off('creds.update', conn.credsUpdate);
 }
 
-conn.handler = handler.handler.bind(global.conn);
-conn.participantsUpdate = handler.participantsUpdate.bind(global.conn);
-conn.groupsUpdate = handler.groupsUpdate.bind(global.conn);
-conn.onDelete = handler.deleteUpdate.bind(global.conn);
-conn.onCall = handler.callUpdate.bind(global.conn);
-conn.connectionUpdate = connectionUpdate.bind(global.conn);
-conn.credsUpdate = saveCreds.bind(global.conn, true);
+conn.handler = handler.handler.bind( conn);
+conn.participantsUpdate = handler.participantsUpdate.bind( conn);
+conn.groupsUpdate = handler.groupsUpdate.bind( conn);
+conn.onDelete = handler.deleteUpdate.bind( conn);
+conn.onCall = handler.callUpdate.bind( conn);
+conn.connectionUpdate = connectionUpdate.bind(conn);
+conn.credsUpdate = saveCreds.bind( conn, true);
 
 conn.ev.on('messages.upsert', conn.handler);
 conn.ev.on('group-participants.update', conn.participantsUpdate);
@@ -486,17 +486,10 @@ conn.ev.on('message.delete', conn.onDelete);
 conn.ev.on('call', conn.onCall);
 conn.ev.on('connection.update', conn.connectionUpdate);
 conn.ev.on('creds.update', conn.credsUpdate);
-conn.ev.on('chats.set', () => {
-console.log('got chats', storeReload.chats.all())
-})
-
-conn.ev.on('contacts.set', () => {
-console.log('got contacts', Object.values(storeReload.contacts))
-})
 isInit = false;
 return true;
 };
-
+global.conn = conn
 const pluginFolder = global.__dirname(join(__dirname, './plugins/index'));
 const pluginFilter = (filename) => /\.js$/.test(filename);
 global.plugins = {};
