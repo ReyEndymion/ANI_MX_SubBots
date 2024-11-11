@@ -18,7 +18,7 @@ for (const c of text) {
 }
 const documentUrl = 'https://www.facebook.com/groups/otakustogether';
   const mimetype = `application/${document}`;
-  const fileName = namerepream;
+  const fileName = namerepre;
   const thumbnailUrl = imagen1;
   const sourceUrl = 'https://www.facebook.com/groups/otakustogether';
 

@@ -2,7 +2,7 @@ import translate from '@vitalets/google-translate-api'
 import { watchFile, unwatchFile } from 'fs'
 import chalk from 'chalk'
 import fs from 'fs'
-import cheerio from 'cheerio'
+import * as cheerio from 'cheerio'
 import fetch from 'node-fetch'
 import axios from 'axios'
 import path, { join } from 'path'
@@ -20,6 +20,7 @@ global.owner = [
 
 /**********GLOBAL INFO*****************/
 global.packname = '(☞ﾟ∀ﾟ)☞'
+global.gt = '(☞ﾟ∀ﾟ)☞'
 global.amsicon = `🌎`
 global.author = '𝓡𝓮𝔂 𝓔𝓷𝓭𝔂𝓶𝓲𝓸𝓷'
 global.wm = '🌎ANI MX SCANS🌏'
@@ -32,13 +33,14 @@ global.animxscans = [['14708300538', 'Bot principal - ANI MX SCANS', true]]
 global.me = animxscans
 global.hp_animxscans = 'https://www.facebook.com/ANIMxSCANS' 
 global.hp_otkstogthr = 'https://www.facebook.com/OtakusTogether' 
-global.md = 'https://github.com/ReyEndymion/ANI_MX_SCANS-MD'
-global.animxscansmd = 'https://github.com/ReyEndymion/ANI_MX_SCANS-MD'
-global.suppbot = 'https://chat.whatsapp.com/DpcgpFF2RO16wFG9SIZemG'
-global.gofwhabot = 'https://chat.whatsapp.com/DpcgpFF2RO16wFG9SlZemG'
-global.gt = '(☞ﾟ∀ﾟ)☞'
-global.botcomedia = '𝓑𝓸𝓽 𝓒𝓸𝓶𝓮𝓭𝓲𝓪 👺👍'
-global.botcomediamd = 'https://github.com/ReyEndymion/Bot-Comedia-MD'
+global.md = 'https://github.com/ReyEndymion/ANI_MX_SUBBOTS'
+global.animxscansmd = 'https://github.com/ReyEndymion/ANI_MX_SUBBOTS'
+global.suppbot = 'https://chat.whatsapp.com/IgcrWQHcxpoD1dgSvTGQ7Y'
+global.gofwhabot = 'https://chat.whatsapp.com/KL6BBEMQoH6KVLy7wjs5St'
+global.lobby = 'https://chat.whatsapp.com/DV5v6atFvtAKaq5mWOFPNb'
+global.community = 'https://chat.whatsapp.com/LpIcN0eoJYXDmT65IwixPk'
+global.gaportes = 'https://chat.whatsapp.com/JArEosfq4x89SGKnQKH6Td'
+
 /***************GLOBAL CONFIG****************/
 global.raiz = `./`
 global.anidir = `ANI_MX_SCANS`
@@ -151,6 +153,8 @@ global.fin = '════◕◕ • •'
 /**********global tags***************/
 global.userID = `@s.whatsapp.net`
 global.groupID = '@g.us'
+global.statusID = `status@broadcast`
+global.newsletterID = `@newsletter`
 global.suittag = ['5215532867844'] 
 global.espadmins = []
 global.prems = [] 

@@ -4,7 +4,12 @@ import { fileURLToPath } from 'url';
 import path, { join } from 'path';
 import { unwatchFile, watchFile } from 'fs';
 import chalk from 'chalk';
-
+import {dbProperties} from './DataBaseINIFunc.js'
+import {reloadHandler} from './main.js'
+import { loadDatabase } from './main.js';
+import { getConnection } from './main.js';
+import connections from './main.js'
+var conn = connections.conn
 /**
  * @type {import('@whiskeysockets/baileys')}
  */
@@ -24,6 +29,7 @@ resolve();
  * @param {import('@whiskeysockets/baileys').BaileysEventMap<unknown>['messages.upsert']} groupsUpdate
  */
 export async function handler(chatUpdate) {
+//global.conn ? global.conn : this ?  : null;
 this.msgqueque = this.msgqueque || [];
 if (!chatUpdate) {
 return;
@@ -33,7 +39,6 @@ let m = chatUpdate.messages[chatUpdate.messages.length - 1];
 if (!m) {
 return;
 }
-if (global.db.data.bot[this.user.jid] == null) await global.loadDatabase(conn);
 try {
 m = smsg(this, m) || m;
 if (!m) {
@@ -47,6 +52,8 @@ try {
 /**
  * Nueva y original estructura de la base de datos desarrollada por https://github.com/ReyEndymion
  */
+if (global.db.data == null) await loadDatabase();
+await dbProperties(this, m.chat, m.sender)
 let bot = global.db.data.bot[this.user.jid];
 if (typeof bot !== 'object') {
 global.db.data.bot[this.user.jid] = {};
@@ -225,14 +232,23 @@ privs: {},
 groups: {}
 }
 }
-} else {
-global.db.data.bot[this.user.jid] = {
-chats: {},
-stats: {},
-msgs: {},
-sticker: {},
-settings: {},
+let stats = global.db.data.bot[this.user.jid].stats;
+if (typeof stats !== 'object')
+global.db.data.bot[this.user.jid].stats = {};
+if (!stats) {
+global.db.data.bot[this.user.jid].stats = {}
 };
+let sticker = global.db.data.bot[this.user.jid].sticker;
+if (typeof sticker !== 'object')
+global.db.data.bot[this.user.jid].sticker = {};
+if (!sticker) {
+global.db.data.bot[this.user.jid].sticker = {}
+};
+let msgs = global.db.data.bot[this.user.jid].smgs;
+if (typeof smgs !== 'object')
+global.db.data.bot[this.user.jid].msgs = {};
+if (!msgs) {
+global.db.data.bot[this.user.jid].msgs = {};
 }
 let settings = global.db.data.bot[this.user.jid].settings;
 if (typeof settings !== 'object')
@@ -242,17 +258,28 @@ if (!('self' in settings)) settings.self = false;
 if (!('autoread' in settings)) settings.autoread = false;
 if (!('restrict' in settings)) settings.restrict = false;
 if (!('antiCall' in settings)) settings.antiCall = false;
+if (!('antispam' in settings)) settings.antispam = false;
 if (!('antiPrivate' in settings)) settings.antiPrivate = false;
 if (!('modejadibot' in settings)) settings.modejadibot = true;
 } else
-global.db.data.bot[this.user.jid].settings[this.user.jid] = {
+global.db.data.bot[this.user.jid].settings = {
 self: false,
 autoread: false,
 restrict: false,
+antispam: false,
 antiCall: false,
 antiPrivate: false,
 modejadibot: true,
 };
+} else {
+global.db.data.bot[this.user.jid] = {
+chats: {},
+stats: {},
+msgs: {},
+sticker: {},
+settings: {},
+};
+}
 } catch (e) {
 console.error(e);
 }
@@ -264,7 +291,7 @@ if (opts['swonly'] && m.chat !== 'status@broadcast') return;
 if (typeof m.text !== 'string') m.text = '';
 
 const isROwner = [
-conn.decodeJid(global.conn.user.id),
+this.decodeJid(this.user.id),
 ...global.owner.map(([number]) => number),
 ]
 .map((v) => v.replace(/[^0-9]/g, '') + '@s.whatsapp.net')
@@ -281,6 +308,7 @@ global.prems
 .map((v) => v.replace(/[^0-9]/g, '') + '@s.whatsapp.net')
 .includes(m.sender);
 
+if ((m.chat.endsWith(newsletterID) || m.chat.endsWith(statusID))) return
 if (opts['queque'] && m.text && !(isMods || isPrems)) {
 let queque = this.msgqueque,
 time = 1000 * 5;
@@ -297,21 +325,21 @@ m.exp += Math.ceil(Math.random() * 10);
 
 let usedPrefix;
 let _user =
-global.db.data.bot[this.user.jid] && global.db.data.bot[this.user.jid].chats && global.db.data.bot[this.user.jid].chats.groups && global.db.data.bot[this.user.jid].chats.groups[m.chat] && global.db.data.bot[this.user.jid].chats.groups[m.chat].users && global.db.data.bot[this.user.jid].chats.groups[m.chat].users[m.sender] || global.db.data.bot[this.user.jid] && global.db.data.bot[this.user.jid].chats && global.db.data.bot[this.user.jid].chats.privs && global.db.data.bot[this.user.jid].chats.privs[m.sender];
+global.db.data.bot[this.user.jid] && global.db.data.bot[this.user.jid].chats && global.db.data.bot[this.user.jid].chats.groups && global.db.data.bot[this.user.jid].chats.groups[m.chat] && global.db.data.bot[this.user.jid].chats.groups[m.chat].users && global.db.data.bot[this.user.jid].chats.groups[m.chat].users[m.sender] || global.db.data.bot[this.user.jid] && global.db.data.bot[this.user.jid].chats && global.db.data.bot[this.user.jid].chats.privs && global.db.data.bot[this.user.jid].chats.privs[m.chat];
 
 const groupMetadata =
 (m.isGroup
-? (conn.chats[m.chat] || {}).metadata ||
+? (this.chats[m.chat] || {}).metadata ||
 (await this.groupMetadata(m.chat).catch((_) => null))
 : {}) || {};
 const participants = (m.isGroup ? groupMetadata.participants : []) || [];
 const user =
 (m.isGroup
-? participants.find((u) => conn.decodeJid(u.id) === m.sender)
+? participants.find((u) => this.decodeJid(u.id) === m.sender)
 : {}) || {}; // User Data
 const bot =
 (m.isGroup
-? participants.find((u) => conn.decodeJid(u.id) == this.user.jid)
+? participants.find((u) => this.decodeJid(u.id) == this.user.jid)
 : {}) || {}; // Your Data
 const isRAdmin = user?.admin == 'superadmin' || false;
 const isAdmin = isRAdmin || user?.admin == 'admin' || false; // Is User Admin?
@@ -339,7 +367,7 @@ console.error(e);
 for (let [jid] of global.owner.filter(
 ([number, _, isDeveloper]) => isDeveloper && number
 )) {
-let data = (await conn.onWhatsApp(jid))[0] || {};
+let data = (await this.onWhatsApp(jid))[0] || {};
 if (data.exists) {
 let resp = `*[REPORTE DE COMANDO CON FALLOS]*\n\n*PLUGIN:* ${name}\n*USUARIO:* ${m.sender}\n*COMANDO:* ${m.text}\n\n*ERROR:*\n\`\`\`${format(e)}\`\`\`\n\n*[!] REPORTELO AL CREADOR, EL TRATARA DE DARLE SOLUCIÓN, PUEDE USAR EL COMANDO #reporte*`.trim()
 let txt = '';
@@ -350,10 +378,10 @@ txt += c;
 count++;
 
 if (count % 10 === 0) {
-await conn.sendPresenceUpdate('composing' , data.jid);
+await this.sendPresenceUpdate('composing' , data.jid);
 }
 }
-await conn.sendMessage(data.jid, { text: txt.trim(), mentions: conn.parseMention(txt) }, {quoted: m, ephemeralExpiration: 24*60*100, disappearingMessagesInChat: 24*60*100} )
+await this.sendMessage(data.jid, { text: txt.trim(), mentions: this.parseMention(txt) }, {quoted: m, ephemeralExpiration: 24*60*100, disappearingMessagesInChat: 24*60*100} )
 }
 }
 }
@@ -366,8 +394,8 @@ continue;
 const str2Regex = (str) => str.replace(/[|\\{}()[\]^$+*?.]/g, '\\$&');
 let _prefix = plugin.customPrefix
 ? plugin.customPrefix
-: conn.prefix
-? conn.prefix
+: this.prefix
+? this.prefix
 : global.prefix;
 let match = (
 _prefix instanceof RegExp // RegExp Mode?
@@ -440,8 +468,8 @@ const chats = m.isGroup ? global.db.data.bot[this.user.jid].chats.groups : globa
 const users = m.isGroup ? global.db.data.bot[this.user.jid].chats.groups[m.chat].users : global.db.data.bot[this.user.jid].chats.privs
 m.plugin = name;
 if (m.chat in chats || m.sender in users) {
-let chat = chats[m.chat];
-let user = users[m.sender];
+let chat = m.isGroup ? global.db.data.bot[this.user.jid].chats.groups[m.chat] : global.db.data.bot[this.user.jid].chats.privs[m.chat];
+let user = m.isGroup ? global.db.data.bot[this.user.jid].chats.groups[m.chat].users[m.sender] : global.db.data.bot[this.user.jid].chats.privs[m.chat];
 const botSpam = global.db.data.bot[this.user.jid].settings;
 
 if (!['owner-unbanchat.js', 'gc-link.js', 'gc-hidetag.js', 'info-creator.js'].includes(name) && chat && chat.isBanned && !isROwner) return; // Except this
@@ -473,10 +501,10 @@ txt += c;
 count++;
 
 if (count % 10 === 0) {
-await conn.sendPresenceUpdate('composing' , m.chat);
+await this.sendPresenceUpdate('composing' , m.chat);
 }
 }
-await conn.sendMessage(m.chat, { text: txt.trim(), mentions: conn.parseMention(txt) }, {quoted: m, ephemeralExpiration: 24*60*100, disappearingMessagesInChat: 24*60*100} )
+await this.sendMessage(m.chat, { text: txt.trim(), mentions: this.parseMention(txt) }, {quoted: m, ephemeralExpiration: 24*60*100, disappearingMessagesInChat: 24*60*100} )
 user.bannedMessageCount++;
 } else if (user.bannedMessageCount === 3) {
 user.bannedMessageSent = true;
@@ -559,10 +587,10 @@ txt += c;
 count++;
 
 if (count % 10 === 0) {
-conn.sendPresenceUpdate('composing' , m.chat);
+this.sendPresenceUpdate('composing' , m.chat);
 }
 }
-//conn.sendMessage(m.chat, { text: txt.trim(), mentions: conn.parseMention(txt) }, {quoted: m, ephemeralExpiration: 24*60*100, disappearingMessagesInChat: 24*60*100} )
+await this.sendMessage(m.chat, { text: txt.trim(), mentions: this.parseMention(txt) }, {quoted: m, ephemeralExpiration: 24*60*100, disappearingMessagesInChat: 24*60*100} )
 } // Hehehe
 else {
 m.exp += xp;
@@ -577,10 +605,10 @@ txt += c;
 count++;
 
 if (count % 10 === 0) {
-conn.sendPresenceUpdate('composing' , m.chat);
+this.sendPresenceUpdate('composing' , m.chat);
 }
 }
-conn.sendMessage(m.chat, { text: txt.trim(), mentions: conn.parseMention(txt) }, {quoted: m, ephemeralExpiration: 24*60*100, disappearingMessagesInChat: 24*60*100} )
+this.sendMessage(m.chat, { text: txt.trim(), mentions: this.parseMention(txt) }, {quoted: m, ephemeralExpiration: 24*60*100, disappearingMessagesInChat: 24*60*100} )
 continue; // Limit habis
 }
 if (plugin.level > _user.level) {
@@ -593,10 +621,10 @@ txt += c;
 count++;
 
 if (count % 10 === 0) {
-conn.sendPresenceUpdate('composing' , m.chat);
+this.sendPresenceUpdate('composing' , m.chat);
 }
 }
-conn.sendMessage(m.chat, { text: txt.trim(), mentions: conn.parseMention(txt) }, {quoted: m, ephemeralExpiration: 24*60*100, disappearingMessagesInChat: 24*60*100} )
+this.sendMessage(m.chat, { text: txt.trim(), mentions: this.parseMention(txt) }, {quoted: m, ephemeralExpiration: 24*60*100, disappearingMessagesInChat: 24*60*100} )
 continue; // If the level has not been reached
 }
 let extra = {
@@ -640,7 +668,7 @@ if (e.name)
 for (let [jid] of global.owner.filter(
 ([number, _, isDeveloper]) => isDeveloper && number
 )) {
-let data = (await conn.onWhatsApp(jid))[0] || {};
+let data = (await this.onWhatsApp(jid))[0] || {};
 if (data.exists){
 let resp = `*[¡REPORTE DE COMANDO CON FALLOS!]*\n\n*PLUGIN:* ${m.plugin}\n*USUARIO:* ${m.sender}\n*COMANDO:* ${usedPrefix}${command} ${args.join( ' ')}\n\n\`\`\`${text}\`\`\`\n\n*[!] REPORTELO AL CREADOR, EL TRATARA DE DARLE SOLUCION, PUEDE USAR EL COMANDO #reporte*`.trim()
 
@@ -652,10 +680,10 @@ txt += c;
 count++;
 
 if (count % 10 === 0) {
-conn.sendPresenceUpdate('composing' , data.jid);
+this.sendPresenceUpdate('composing' , data.jid);
 }
 }
-conn.sendMessage(data.jid, { text: txt.trim(), mentions: conn.parseMention(txt) }, {quoted: m, ephemeralExpiration: 24*60*100, disappearingMessagesInChat: 24*60*100} )
+this.sendMessage(data.jid, { text: txt.trim(), mentions: this.parseMention(txt) }, {quoted: m, ephemeralExpiration: 24*60*100, disappearingMessagesInChat: 24*60*100} )
  }
 }
 let resp = text;
@@ -667,10 +695,10 @@ txt += c;
 count++;
 
 if (count % 10 === 0) {
-await conn.sendPresenceUpdate('composing' , m.chat);
+await this.sendPresenceUpdate('composing' , m.chat);
 }
 }
-await conn.sendMessage(m.chat, { text: txt.trim(), mentions: conn.parseMention(txt) }, {quoted: m, ephemeralExpiration: 24*60*100, disappearingMessagesInChat: 24*60*100} )
+await this.sendMessage(m.chat, { text: txt.trim(), mentions: this.parseMention(txt) }, {quoted: m, ephemeralExpiration: 24*60*100, disappearingMessagesInChat: 24*60*100} )
 }
 } finally {
 // m.reply(util.format(_user))
@@ -691,10 +719,10 @@ txt += c;
 count++;
 
 if (count % 10 === 0) {
-await conn.sendPresenceUpdate('composing' , m.chat);
+await this.sendPresenceUpdate('composing' , m.chat);
 }
 }
-await conn.sendMessage(m.chat, { text: txt.trim(), mentions: conn.parseMention(txt) }, {quoted: m, ephemeralExpiration: 24*60*100, disappearingMessagesInChat: 24*60*100} )
+await this.sendMessage(m.chat, { text: txt.trim(), mentions: this.parseMention(txt) }, {quoted: m, ephemeralExpiration: 24*60*100, disappearingMessagesInChat: 24*60*100} )
 }
 }
 break;
@@ -709,7 +737,6 @@ if (quequeIndex !== -1) {
 this.msgqueque.splice(quequeIndex, 1);
 }
 }
-//console.log(global.db.data.bot[this.user.jid].users[m.sender])
 let stats = global.db.data.bot[this.user.jid].stats;
 let user = m.isGroup ? global.db.data.bot[this.user.jid].chats.groups[m.chat].users[m.sender] : global.db.data.bot[this.user.jid].chats.privs[m.sender];
 
@@ -750,11 +777,44 @@ if (!opts['noprint']) await (await import(`./lib/print.js`)).default(m, this);
 } catch (e) {
 console.log(m, m.quoted, e);
 }
-const settingsREAD = global.db.data.bot[this.user.jid].settings[this.user.jid] || {};
+const settingsREAD = global.db.data.bot[this.user.jid].settings || {};
 if (opts['autoread']) await this.readMessages([m.key]);
 if (settingsREAD.autoread2) await this.readMessages([m.key]);
 // if (settingsREAD.autoread2 == 'true') await this.readMessages([m.key])
 
+}
+return conn = this
+}
+
+/**
+ * Handle groups update
+ * @param {import('@whiskeysockets/baileys').BaileysEventMap<unknown>['groups.update']} groupsUpdate
+ */
+export async function groupsUpdate(groupsUpdate) {
+for (const groupUpdate of groupsUpdate) {
+//console.log('handlerGroupsUpdate: ', conn)
+const { id, subject, subjectOwner, subjectTime, size, creation, owner, desc, descId, linkedParent, restrict, announce, isCommunity, isCommunityAnnounce, joinApprovalMode, memberAddMode, participants, ephemeralDuration} = groupUpdate
+if (({ id, subject, subjectOwner, subjectTime, size, creation, owner, desc, descId, linkedParent, restrict, announce, isCommunity, isCommunityAnnounce, joinApprovalMode, memberAddMode, participants, ephemeralDuration}) !== undefined) {
+const group = id
+let groups = global.db.data.bot[conn.user.jid].chats.groups;
+if (typeof groups !== 'object') global.db.data.bot[conn.user.jid].chats.groups = {};
+if (groups) {
+//const groupMetadata = await conn.groupMetadata(group) || (conn.chats[group] || {}).metadata;
+const chat = global.db.data.bot[conn.user.jid].chats.groups[group];
+if (typeof chat != 'object') global.db.data.bot[conn.user.jid].chats.groups[group] = {}
+} else {
+global.db.data.bot[conn.user.jid].chats.groups = {
+[group]: {
+users: {}
+}
+}
+}
+}
+global.db.write()
+}
+for (const update of groupsUpdate) {
+const {id, subject, author} = update
+if ((id, subject, author) !== undefined) console.log(`se ha cambiado el nombre ${subject} del grupo ${id} y la accion fue por ${author}`)
 }
 }
 
@@ -764,180 +824,34 @@ if (settingsREAD.autoread2) await this.readMessages([m.key]);
  * Tipo de dato para el stub de mensajes de WhatsApp
  * @typedef {import('@whiskeysockets/baileys').WAMessageStubType} WAMessageStubType
  */
-export async function participantsUpdate({ id, participants, action }) {
-const grupo = id.id
-if (!grupo.endsWith(groupID)) return
-console.log('participantsUpdate: ', grupo)
-const chat = global.db.data.bot[this.user.jid].chats.groups[grupo] || {};
-if (typeof chat != 'object') global.db.data.bot[this.user.jid].chats.groups[grupo] = {}
-const groupMetadata = await this.groupMetadata(grupo) || (this.chats[grupo] || {}).metadata;
-let users = global.db.data.bot[this.user.jid].chats.groups[grupo].users
-if (typeof users != 'object') global.db.data.bot[this.user.jid].chats.groups[grupo].users = {}
-if (users) {
-for (const participant of groupMetadata.participants) {
-if (!participant.id.endsWith(userID)) continue
-const user = users[participant.id]
-if (typeof user != 'object') global.db.data.bot[this.user.jid].chats.groups[grupo].users[participant.id] = {}
-if (action === ('add'|'promote'|'daradmin'|'darpoder'|'demote'|'quitarpoder'|'quitaradmin')) {
-if (!user) {
-global.db.data.bot[this.user.jid].chats.groups[grupo].users[participant.id] = {}
-}
-} else if (action === 'remove') {
-delete users[participant.id]
-if (!participant.id.endsWith(userID)) delete users[participant.id]
-}
-}
-} else {
-global.db.data.bot[this.user.jid].chats.groups[grupo].users = {}
-}
-}
-
-/**
- * Handle groups update
- * @param {import('@whiskeysockets/baileys').BaileysEventMap<unknown>['groups.update']} groupsUpdate
- */
-export async function groupsUpdate(groupsUpdate) {
-const group = groupsUpdate.id
-const usuario = groupsUpdate.participants.id
-let groups = global.db.data.bot[this.user.jid].chats.groups;
-if (typeof groups !== 'object') global.db.data.bot[this.user.jid].chats.groups = {};
+export async function participantsUpdate({id, author, participants, action}) {
+const group = id
+if (!group) return
+let groups = global.db.data.bot[conn.user.jid].chats.groups;
+if (typeof groups !== 'object') global.db.data.bot[conn.user.jid].chats.groups = {};
 if (groups) {
-chat = global.db.data.bot[this.user.jid].chats.groups[group];
-if (typeof chat !== 'object') global.db.data.bot[this.user.jid].chats.groups[group] = {};
-if (chat) {
-if (!('isBanned' in chat)) chat.isBanned = false;
-if (!('welcome' in chat)) chat.welcome = true;
-if (!('detect' in chat)) chat.detect = true;
-if (!('sWelcome' in chat)) chat.sWelcome = '';
-if (!('sBye' in chat)) chat.sBye = '';
-if (!('sPromote' in chat)) chat.sPromote = '';
-if (!('sDemote' in chat)) chat.sDemote = '';
-if (!('delete' in chat)) chat.delete = true;
-if (!('modohorny' in chat)) chat.modohorny = false;
-if (!('autosticker' in chat)) chat.autosticker = false;
-if (!('audios' in chat)) chat.audios = false;
-if (!('antiLink' in chat)) chat.antiLink = false;
-if (!('antiLink2' in chat)) chat.antiLink2 = false;
-if (!('antiviewonce' in chat)) chat.antiviewonce = false;
-if (!('antiToxic' in chat)) chat.antiToxic = false;
-if (!('antiTraba' in chat)) chat.antiTraba = false;
-if (!('antiArab' in chat)) chat.antiArab = false;
-if (!('modoadmin' in chat)) chat.modoadmin = false;
-if (!('simi' in chat)) chat.simi = false;
-if (!('stickers' in chat)) chat.stickers = false;
-if (!('asistente' in chat)) chat.asistente = false;
-if (!('gruposRol' in chat)) chat.gruposRol = false;
-if (!isNumber(chat.expired)) chat.expired = 1;
-if (!('users' in chat)) chat.users = {};
-} else
-global.db.data.bot[this.user.jid].chats[group] = {
-isBanned: false,
-welcome: true,
-detect: true,
-sWelcome: '',
-sBye: '',
-sPromote: '',
-sDemote: '',
-delete: true,
-modohorny: true,
-autosticker: false,
-audios: true,
-antiLink: false,
-antiLink2: false,
-antiviewonce: false,
-antiToxic: false,
-antiTraba: false,
-antiArab: false,
-modoadmin: false,
-simi: false,
-stickers: true,
-asistente: false,
-gruposRol: false,
-expired: 0,
-users: {}
-};
-let users = global.db.data.bot[this.user.jid].chats.groups[group].users;
-if (typeof users !== 'object') global.db.data.bot[this.user.jid].chats.groups[group].users = {};
-if (users) {
-let user = global.db.data.bot[this.user.jid].chats.groups[group].users[usuario];
-if (typeof user !== 'object') {
-global.db.data.bot[this.user.jid].chats.groups[group].users[usuario] = {};
-}
-if (user) {
-// Nuevo contador de mensajes 
-if (!('msgcount' in user)) user.msgcount = {};
-if (!isNumber(user.msgcount.count)) {user.msgcount.count = 0;}
-if (!isNumber(user.msgcount.time)) {user.msgcount.time = 0;}
-if (!isNumber(user.exp)) user.exp = 0;
-if (!isNumber(user.limit)) user.limit = 10;
-if (!isNumber(user.lastclaim)) user.lastclaim = 0;
-if (!('registered' in user)) user.registered = false;
-if (!user.registered) {
-if (!('name' in user)) user.name = m.name;
-if (!isNumber(user.age)) user.age = -1;
-if (!isNumber(user.regTime)) user.regTime = -1;
-}
-if (!isNumber(user.afk)) user.afk = -1;
-if (!('role' in user)) user.role = 'Novato';
-if (!('afkReason' in user)) user.afkReason = '';
-if (!('banned' in user)) user.banned = false;
-if (!isNumber(user.warn)) user.warn = 0;
-if (!isNumber(user.level)) user.level = 0;
-if (!('autolevelup' in user)) user.autolevelup = true;
-if (!isNumber(user.money)) user.money = 0;
-if (!isNumber(user.limit)) user.limit = 10;
-if (!isNumber(user.lastclaim)) user.lastclaim = 0;
-} else
-global.db.data.bot[this.user.jid].chats.groups[group].users[usuario] = {
-msgcount: {count: 0, time: 0},
-exp: 0,
-limit: 10,
-lastclaim: 0,
-registered: false,
-name: m.name,
-age: -1,
-regTime: -1,
-afk: -1,
-afkReason: '',
-banned: false,
-warn: 0,
-level: 0,
-role: 'Novato',
-autolevelup: true,
-money: 0,
-limit: 10,
-lastclaim: 0,
-lastweekly: 0,
-lastmonthly: 0,
-};
-} else {
-global.db.data.bot[this.user.jid].chats.groups[group].users = {
-[usuario]: {}
-};
+console.log('participantsUpdate: ', participants.toString())
+if (action === ('add')) {
+global.db.data.bot[conn.user.jid].chats.groups[group].users[participants.toString()] = {}
+} else if (action === 'remove') {
+delete global.db.data.bot[conn.user.jid].chats.groups[group].users[participants.toString()]
+if (!participants.toString().endsWith(userID)) delete global.db.data.bot[conn.user.jid].chats.groups[group].users[participants.toString()]
 }
 } else {
-global.db.data.bot[this.user.jid].chats.groups = {
+global.db.data.bot[conn.user.jid].chats.groups = {
 [group]: {
 users: {}
 }
 }
 }
-
+global.db.write()
 }
 
-export async function callUpdate( callUpdate, conn, isAdmin, isBotAdmin, isOwner, isROwner, participants) {
-let ow = global.owner.filter((entry) => typeof entry[0] === 'string' && !isNaN(entry[0])).map((entry) => ({ jid: entry[0] })).slice(0).map(({ jid }) => `${participants.some((p) => jid === p.jid) ? `(${conn.getName(jid)}) wa.me/` : '@'}${jid.split`@`[0]}`).join` y `;
-let adm = global.espadmins.filter((entry) => typeof entry[0] === 'string' && !isNaN(entry[0])).map((entry) => ({ jid: entry[0] })).slice(0).map(({ jid }) => `${participants.some((p) => jid === p.jid) ? `(${conn.getName(jid)}) wa.me/` : '@'}${jid.split`@`[0]}`).join`, `;
-console.log(some);
-let sender = `@${m.sender.split`@`[0]}`;
-if (adm.includes(sender)) {
-console.log(
-`Este remitente ${sender} está en la lista, no lo puedo bloquear.`
-);
-} else {
-console.log(`Bloqueando usuario ${sender} con la función antiprivate.`);
-}
-let isAnticall = global.db.data.bot[this.user.jid].settings[this.user.jid].antiCall;
+console.log('handlerCheck: ', conn);
+
+export async function callUpdate(callUpdate) {
+let ow = global.owner.filter((entry) => typeof entry[0] === 'string' && !isNaN(entry[0])).map((entry) => ({ jid: entry[0] })).slice(0).map(({ jid }) => `${jid.split`@`[0]}`).join` y `;
+let isAnticall = global.db.data.bot[conn.user.jid].settings[conn.user.jid].antiCall;
 if (!isAnticall) return;
 for (let nk of callUpdate) {
 if (nk.isGroup == false) {
@@ -955,13 +869,13 @@ conn.sendPresenceUpdate('composing', m.chat);
 }
 await conn.sendMessage(nk.from, { text: txt.trim(), mentions: conn.parseMention(txt) }, {quoted: m, ephemeralExpiration: 24 * 60 * 100, disappearingMessagesInChat: 24 * 60 * 100});
 //let data = global.owner.filter(([id, isCreator]) => id && isCreator)
-//await this.sendContact(nk.from, data.map(([id, name]) => [id, name]), false, { quoted: callmsg })
+//await conn.sendContact(nk.from, data.map(([id, name]) => [id, name]), false, { quoted: callmsg })
 let vcard = `BEGIN:VCARD\nVERSION:3.0\nN:;ℛℯ𝓎 ℰ𝓃𝒹𝓎𝓂𝒾ℴ𝓃;;;\nFN:ℛℯ𝓎 ℰ𝓃𝒹𝓎𝓂𝒾ℴ𝓃\nORG:ℛℯ𝓎 ℰ𝓃𝒹𝓎𝓂𝒾ℴ𝓃\nTITLE:\nitem1.TEL;waid=5215517489568:+521 5517489568\nitem1.X-ABLabel:ℛℯ𝓎 ℰ𝓃𝒹𝓎𝓂𝒾ℴ𝓃\nX-WA-BIZ-DESCRIPTION:[❗] ᴄᴏɴᴛᴀᴄᴛᴀ ᴀ ᴇsᴛᴇ ɴᴜᴍ ᴘᴀʀᴀ ᴄᴏsᴀs ɪᴍᴘᴏʀᴛᴀɴᴛᴇs.\nX-WA-BIZ-NAME:ℛℯ𝓎 ℰ𝓃𝒹𝓎𝓂𝒾ℴ𝓃\nEND:VCARD`;
-await this.sendMessage(
+await conn.sendMessage(
 nk.from,
 { contacts: { displayName: 'ℛℯ𝓎 ℰ𝓃𝒹𝓎𝓂𝒾ℴ𝓃', contacts: [{ vcard }] } },
 {quoted: callmsg, ephemeralExpiration: 24 * 60 * 100, disappearingMessagesInChat: 24 * 60 * 100});
-await this.updateBlockStatus(nk.from, 'block');
+await conn.updateBlockStatus(nk.from, 'block');
 }
 }
 }
@@ -969,11 +883,11 @@ await this.updateBlockStatus(nk.from, 'block');
 
 export async function deleteUpdate(message) {
 try {
+console.log('deleteUpdate: ', message)
 const { fromMe, id, participant } = message;
-if (fromMe) return;
-let msg = this.serializeM(this.loadMessage(id));
-if (!msg) return;
-let chat = global.db.data.bot[this.user.jid].chats[msg.chat] || {};
+let m = conn.serializeM(conn.loadMessage(id));
+if (!m || fromMe) return;
+let chat = global.db.data.bot[conn.user.jid].chats[msg.chat] || {};
 if (chat.delete) return;
 let resp = `
 ━━━━⬣*ANTI DELETE*⬣━━━━
@@ -984,19 +898,8 @@ let resp = `
 *—◉ #enable delete*
 ━━━━⬣*ANTI DELETE*⬣━━━━
 `.trim();
-let txt = '';
-let count = 0;
-for (const c of resp) {
-await new Promise(resolve => setTimeout(resolve, 15));
-txt += c;
-count++;
-
-if (count % 10 === 0) {
-conn.sendPresenceUpdate('composing' , msg.chat);
-}
-}
-conn.sendMessage(msg.chat, { text: txt.trim(), mentions: conn.parseMention(txt) }, {quoted: m, ephemeralExpiration: 24*60*100, disappearingMessagesInChat: 24*60*100} )
-this.copyNForward(msg.chat, msg).catch((e) => console.log(e, msg));
+await conn.sendWritingText(m.chat, resp, m )
+conn.copyNForward(m.chat, msg).catch((e) => console.log(e, msg));
 } catch (e) {
 console.error(e);
 }
@@ -1025,25 +928,13 @@ restrict:
 '*[ ⚠️ ALERTA ⚠️ ] ESTE COMANDO ESTA RESTRINGIDO/DESACTIVADO POR DESICION DEL PROPIETARIO/A (OWNER) DEL BOT*',
 }[type];
 if (msg) {
-//m.reply(msg)
-let txt = '';
-let count = 0;
-for (const c of msg) {
-new Promise((resolve) => setTimeout(resolve, 15));
-txt += c;
-count++;
-
-if (count % 10 === 0) {
-conn.sendPresenceUpdate('composing', m.chat);
-}
-}
-conn.sendMessage(m.chat, { text: txt.trim(), mentions: conn.parseMention(txt) }, {quoted: m, ephemeralExpiration: 24 * 60 * 100, disappearingMessagesInChat: 24 * 60 * 100});
+return conn.sendWritingText(m.chat, msg, m);
 }
 };
 
 let file = global.__filename(import.meta.url, true);
 watchFile(file, async () => {
 unwatchFile(file);
+await reloadHandler(true).catch((err) => console.log('Error Handler: ', err));
 console.log(chalk.redBright(`Se actualizo "handler.js"`));
-if (global.reloadHandler) console.log(await global.reloadHandler());
 });

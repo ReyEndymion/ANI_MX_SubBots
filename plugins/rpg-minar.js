@@ -1,7 +1,13 @@
 let handler = async (m, { conn, isPrems}) => {
+if (!m.isGroup) return
+let bot = global.db.data.bot[conn.user.jid] || {}
+const chats = bot.chats || {}
+const groups = chats.groups || {}
+const chat = groups[m.chat] || {}
+const users = chat.users || {}
 let hasil = Math.floor(Math.random() * 1000)
-let time = global.db.data.bot[conn.user.jid].chats.groups[m.chat].users[m.sender].lastmiming + 600000
-if (new Date - global.db.data.bot[conn.user.jid].chats.groups[m.chat].users[m.sender].lastmiming < 600000) {
+let time = users[m.sender].lastmiming + 600000
+if (new Date - users[m.sender].lastmiming < 600000) {
 let resp = `*[ ⏲️ ] _Espera_ ${msToTime(time - new Date())} _para volver a minar_*`
 let txt = '';
 let count = 0;
@@ -14,7 +20,7 @@ if (count % 10 === 0) {
 await conn.sendPresenceUpdate('composing' , m.chat);
 }
 }
- return await conn.sendMessage(m.chat, { text: txt.trim(), mentions: conn.parseMention(txt) }, {quoted: m, ephemeralExpiration: 24*60*100, disappearingMessagesInChat: 24*60*100} );
+return await conn.sendMessage(m.chat, { text: txt.trim(), mentions: conn.parseMention(txt) }, {quoted: m, ephemeralExpiration: 24*60*100, disappearingMessagesInChat: 24*60*100} );
 }
 let resp = `*[ 🎉 ] Genial, minaste ${hasil} XP*`
 let txt = '';
@@ -30,9 +36,7 @@ await conn.sendPresenceUpdate('composing' , m.chat);
 }
 await conn.sendMessage(m.chat, { text: txt.trim(), mentions: conn.parseMention(txt) }, {quoted: m, ephemeralExpiration: 24*60*100, disappearingMessagesInChat: 24*60*100} );
 
-global.db.data.users[m.sender].lastmiming = new Date * 1
-
-global.db.data.bot[conn.user.jid].chats.groups[m.chat].users[m.sender].lastmiming = new Date * 1
+users[m.sender].lastmiming = new Date * 1
   
 }
 handler.help = ['minar']

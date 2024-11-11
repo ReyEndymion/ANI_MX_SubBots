@@ -50,27 +50,56 @@ p.on('message', data => {
 console.log('[RECEIVED]', data)
 switch (data) {
 case 'reset':
-p.process.kill()
-isRunning = false
-start.apply(this, arguments)
+p.removeAllListeners();
+rl.removeAllListeners('line');
+p.kill();
+console.log(`🔄 Reiniciando proceso '${file}'...`);
+start(file)
 break
 case 'uptime':
-p.send(process.uptime())
+console.info('[UPTIME] ', p.send(process.uptime()))
 break
+case 'stop':
+isRunning = false
+p.process.kill()
+p.kill();
+p.removeAllListeners();
+rl.removeAllListeners('line');
+break
+case 'kill':
+process.exit()
 }
 })
 p.on('exit', (_, code) => {
 isRunning = false
 console.error('❎ㅤOcurrio un error inesperado:', code)
+if (code === ('SIGKILL' || 'SIGABRT')) {
+isRunning = false
+p.kill();
+p.removeAllListeners();
+rl.removeAllListeners('line');
+start(file)
 
+}
 p.process.kill()
 if (process.env.pm_id) {
 process.exit(1)
 } else {
-process.exit()
 //stop('reset', 'crash')
 }
 })
+
+p.on('error', (err) => {
+console.error(`Error en el proceso hijo: ${err.code}`);
+if (err.code === 'EPIPE') {
+console.error('El canal de comunicación está cerrado.');
+p.removeAllListeners();
+rl.removeAllListeners('line');
+p.kill();
+console.log(`🔄 Reiniciando proceso '${file}'...`);
+start(file)
+}
+});
 
 let opts = new Object(yargs(process.argv.slice(2)).exitProcess(false).parse())
 if (!opts['test'])

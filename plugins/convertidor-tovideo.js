@@ -1,9 +1,9 @@
 import { webp2mp4 } from '../lib/webp2mp4.js'
 import { ffmpeg } from '../lib/converter.js'
 let handler = async (m, { conn, usedPrefix, command }) => {
-if (!m.quoted) throw `*[❗INFO❗] RESPONDA AL AUDIO QUE DESEA CONVERTIR EN VIDEO CON EL COMANDO ${usedPrefix + command}*`
+if (!m.quoted) return conn.sendWritingText(m.chat, `*[❗INFO❗] RESPONDA AL AUDIO QUE DESEA CONVERTIR EN VIDEO CON EL COMANDO ${usedPrefix + command}*`, m)
 let mime = m.quoted.mimetype || ''
-if (!/webp/.test(mime)) throw `*[❗INFO❗] RESPONDA AL AUDIO QUE DESEA CONVERTIR EN VIDEO CON EL COMANDO ${usedPrefix + command}*`
+if (!/webp/.test(mime)) return conn.sendWritingText(m.chat, `*[❗INFO❗] RESPONDA AL AUDIO QUE DESEA CONVERTIR EN VIDEO CON EL COMANDO ${usedPrefix + command}*`, m)
 let media = await m.quoted.download()
 let out = Buffer.alloc(0)
 if (/webp/.test(mime)) {

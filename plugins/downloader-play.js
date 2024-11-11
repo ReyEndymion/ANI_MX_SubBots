@@ -1,4 +1,4 @@
-import cheerio from 'cheerio';
+import * as cheerio from 'cheerio';
 import fetch from 'node-fetch';
 import axios from 'axios';
 import { youtubeSearch, youtubedl, youtubedlv2 } from '@bochilteam/scraper-sosmed'
@@ -22,6 +22,11 @@ const chat = m.isGroup ? groups[m.chat] : privs[m.chat]
 let resp, q
 let who = m.mentionedJid && m.mentionedJid[0] ? m.mentionedJid[0] : m.fromMe ? conn.user.jid : m.sender
 let {titleP, publishedTimeP, durationHP, viewHP, descriptionP, authorP, videoIdP, thumbnailP, urlP, vidP} = {}
+if (!text) {
+resp = `*[❗INFO❗] NOMBRE DE LA CANCION FALTANTE, POR FAVOR INGRESE EL COMANDO MAS EL NOMBRE/TITULO DE UNA CANCION*\n\n*—◉ EJEMPLO:*\n*${usedPrefix + command} Good Feeling - Flo Rida*`
+delete confirmations[m.sender]
+} else {
+
 if (/^play$/ig.test(command)) {
 try {
 let vid = (await youtubeSearch(text)).video[0]
@@ -61,7 +66,7 @@ await conn.sendPresenceUpdate('composing' , m.chat);
 q = await conn.sendMessage(m.chat, {image: {url: thumbnailP}, caption: txt.trim()}, {quoted: m, ephemeralExpiration: 24*60*100, disappearingMessagesInChat: 24*60*100});
 }
 } catch (TypeError) {
-let resp = `*[❗INFO❗] ERROR, POR FAVOR VUELVA A INTENTARLO*\n\n*POSIBLEMENTE FALTE EL NOMBRE DE AUTOR O LA CANCION PARA MEJOR PRECISION*\n\nError: ${TypeError}`
+let resp = `*[❗INFO❗] ERROR, POR FAVOR VUELVA A INTENTARLO*\n\n*POSIBLEMENTE FALTE EL NOMBRE DE AUTOR O LA CANCION PARA MEJOR PRECISION*\n\nError: ${TypeError.stack}`
 let txt = '';
 let count = 0;
 for (const c of resp) {
@@ -102,19 +107,12 @@ resp = `*◉—⌈🔊 YOUTUBE PLAY🔊⌋—◉*\n
 🪬 *TIPO:* ${yt_vid[0].type}
 🔗 *LINK:* ${urlP}\n\n🎵 AUDIO 🎵\n\nPara descargar mencione la palabra 'audio' o pruebe con el comando:\n${usedPrefix}ytmp3 ${urlP}\n\n🎥 VIDEO 🎥\n\nPara descargar mencione la palabra 'video' o pruebe con el comando:\n${usedPrefix}ytmp4 ${urlP} \n\n📋 MAS RESULTADOS 📋\n\nPara ver mas resultados mencione la palabra 'mas' o pruebe con el comando \n${usedPrefix}playlist ${text}`.trim()
 } catch (error) {
-resp = `*[❗INFO❗] ERROR, POR FAVOR VUELVA A INTENTARLO*\n\n*POSIBLEMENTE FALTE EL NOMBRE DE AUTOR O LA CANCION PARA MEJOR PRECISION*\n\nError: ${error}`
+resp = `*[❗INFO❗] ERROR, POR FAVOR VUELVA A INTENTARLO*\n\n*POSIBLEMENTE FALTE EL NOMBRE DE AUTOR O LA CANCION PARA MEJOR PRECISION*\n\nError: ${error.stack}`
 delete confirmations[m.sender]
 } finally {}
 }
-if (!text) {
-resp = `*[❗INFO❗] NOMBRE DE LA CANCION FALTANTE, POR FAVOR INGRESE EL COMANDO MAS EL NOMBRE/TITULO DE UNA CANCION*\n\n*—◉ EJEMPLO:*\n*${usedPrefix + command} Good Feeling - Flo Rida*`
-delete confirmations[m.sender]
-} 
-if (!vidP) {
-resp = '*[❗INFO❗] LO SIENTO, NO PUDE ENCONTRAR EL AUDIO/VIDEO, INTENTE CON OTRO NOMBRE/TITULO*'
-delete confirmations[m.sender]
+await conn.sendWritingText(m.chat, resp, m)
 }
-
 const type = (args[0] || '').toLowerCase()
 const countP = Math.min(Number.MAX_SAFE_INTEGER, Math.max(1, (isNumber(args[1]) ? parseInt(args[1]) : 1))) * 1
 confirmations[m.sender] = {
@@ -141,17 +139,13 @@ if (count % 10 === 0) {
  await conn.sendPresenceUpdate('composing' , m.chat);
 }
 }
-if (thumbnailP) {
-//q = await conn.sendMessage(m.chat, {image: {url: thumbnailP}, caption: txt.trim()}, {quoted: m, ephemeralExpiration: 24*60*100, disappearingMessagesInChat: 24*60*100});
-return conn.sendMessage(m.chat, { text: txt, mentions: conn.parseMention(txt) }, {quoted: m, ephemeralExpiration: 24*60*100, disappearingMessagesInChat: 24*60*100})
-} else {
-return conn.sendMessage(m.chat, { text: txt, mentions: conn.parseMention(txt) }, {quoted: m, ephemeralExpiration: 24*60*100, disappearingMessagesInChat: 24*60*100})
 }
- }
- const getRandom = (ext) => {
+const getRandom = (ext) => {
 return `${Math.floor(Math.random() * 10000)}${ext}`;
 };
 handler.before = async (m, { conn, args}) => {
+if (m.chat == 'status@broadcast') return
+
 const bot = global.db.data.bot[conn.user.jid]
 const chats = bot.chats
 const privs = chats.privs

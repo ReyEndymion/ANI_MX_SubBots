@@ -1,7 +1,7 @@
 let { downloadContentFromMessage } = (await import('@whiskeysockets/baileys'));
 
 export async function before(m, {conn, isAdmin, isBotAdmin }) {
- 
+if ((m.chat.endsWith('@newsletter') || m.chat.endsWith(statusID))) return
 const bot = global.db.data.bot[conn.user.jid]
 const chats = bot.chats
 const privs = chats.privs

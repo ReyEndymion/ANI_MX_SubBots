@@ -62,8 +62,9 @@ for (const c of infoChaGPT) {
 }
 handler.help = ['ai <peticion>']
 handler.tags = ['ai']
-handler.command = new RegExp(`^(ia|openai|chatgpt|robot|${conn?.user?.jid.replace('@s.whatsapp.net', '')})$`, 'i');
+handler.command = new RegExp(`^(ia|openai|chatgpt|robot)$`, 'i');
 handler.limit = false
 handler.register = false
-
-export default handler//original de https://github.com/ReyEndymion
+//|${conn?.user?.jid.replace('@s.whatsapp.net', '')}
+export default handler
+//original de https://github.com/ReyEndymion

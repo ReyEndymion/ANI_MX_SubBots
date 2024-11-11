@@ -1,8 +1,12 @@
 //plugin recontruido y naturalizado por github.com/reyendymion
 import fs from "fs"
 import path from 'path'
-async function before(m, {conn}) {
-let chat = m.isGroup ? global.db.data.bot[conn.user.jid].chats.groups[m.chat] : global.db.data.bot[conn.user.jid].chats.privs[m.chat]
+export async function before(m, {conn}) {
+let bot = global.db.data.bot[conn.user.jid]
+let chats = bot.chats || {}
+let privs = chats.privs || {}
+const groups = chats.groups || {}
+const chat = m.isGroup ? groups[m.chat] || {} : privs[m.chat] || {}
 if (/^hola$/i.test(m.text) && chat.audios && !chat.isBanned) {
 let vn = path.join(media, 'audios/Hola.mp3')
 return sendAudioRecording(vn)
