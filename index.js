@@ -30,12 +30,11 @@ var isRunning = false
  * Start a js file
  * @param {String} file `path/to/file`
  */
-function start(file) {
-if (isRunning) return
-isRunning = true
-let args = [join(__dirname, file), ...process.argv.slice(2)]
-
-say(`${description}\n\nAjuste la pantalla para escanear el codigo QR`, {
+async function start(file, message) {
+return new Promise((resolve, reject) => {
+const args = [join(__dirname, file), ...process.argv.slice(2)];
+if (message === undefined) message = `cargando ${file}... `
+say(message, {
 font: 'console',
 align: 'center',
 gradient: ['red', 'magenta']
@@ -44,50 +43,40 @@ gradient: ['red', 'magenta']
 setupMaster({
 exec: args[0],
 args: args.slice(1),
-})
-let p = fork()
+});
+
+let p = fork();
+
 p.on('message', data => {
-console.log('[RECEIVED]', data)
+console.log('[RECEIVED]', data);
 switch (data) {
 case 'reset':
 p.removeAllListeners();
 rl.removeAllListeners('line');
 p.kill();
 console.log(`🔄 Reiniciando proceso '${file}'...`);
-start(file)
-break
+start(file, message).then(resolve).catch(reject);
+break;
 case 'uptime':
-console.info('[UPTIME] ', p.send(process.uptime()))
-break
-case 'stop':
-isRunning = false
-p.process.kill()
-p.kill();
-p.removeAllListeners();
-rl.removeAllListeners('line');
-break
-case 'kill':
-process.exit()
+if (p.process.connected) p.send(process.uptime());
+break;
 }
-})
-p.on('exit', (_, code) => {
-isRunning = false
-console.error('❎ㅤOcurrio un error inesperado:', code)
-if (code === ('SIGKILL' || 'SIGABRT')) {
-isRunning = false
-p.kill();
-p.removeAllListeners();
-rl.removeAllListeners('line');
-start(file)
+});
 
-}
-p.process.kill()
-if (process.env.pm_id) {
-process.exit(1)
+p.on('exit', (code, signal) => {
+console.error(`❎ㅤEl proceso '${file}' ha salido con código de error ${signal || code}`);
+p.removeAllListeners();
+//rl.removeAllListeners('line');
+if (code !== 0 || signal === 'SIGKILL') {
+p.removeAllListeners();
+rl.removeAllListeners('line');
+p.kill();
+console.log(`🔄 Reiniciando proceso '${file}'...`);
+start(file, message).then(resolve).catch(reject);
 } else {
-//stop('reset', 'crash')
+process.exit(code);
 }
-})
+});
 
 p.on('error', (err) => {
 console.error(`Error en el proceso hijo: ${err.code}`);
@@ -97,15 +86,21 @@ p.removeAllListeners();
 rl.removeAllListeners('line');
 p.kill();
 console.log(`🔄 Reiniciando proceso '${file}'...`);
-start(file)
 }
 });
 
-let opts = new Object(yargs(process.argv.slice(2)).exitProcess(false).parse())
-if (!opts['test'])
-if (!rl.listenerCount()) rl.on('line', line => {
-p.emit('message', line.trim())
-})
+const opts = yargs(process.argv.slice(2)).exitProcess(false).parse();
+if (!opts['test']) {
+rl.removeAllListeners('line');
+rl.on('line', line => {
+//console.log('index:', p);
+if (p.process.connected) {
+p.emit('message', line.trim());
+//p.send(line.trim());
+} else {console.log('El proceso no está conectado. No se pudo enviar el comando.');}
+});
+}
+});
 }
 
 start('main.js')
