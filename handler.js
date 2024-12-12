@@ -4,7 +4,7 @@ import { fileURLToPath } from 'url';
 import path, { join } from 'path';
 import { unwatchFile, watchFile } from 'fs';
 import chalk from 'chalk';
-import {dbProperties} from './DataBaseINIFunc.js'
+//import {dbProperties} from './DataBaseINIFunc.js'
 import {reloadHandler} from './main.js'
 import { loadDatabase } from './main.js';
 import { getConnection } from './main.js';
@@ -53,7 +53,7 @@ try {
  * Nueva y original estructura de la base de datos desarrollada por https://github.com/ReyEndymion
  */
 if (global.db.data == null) await loadDatabase();
-await dbProperties(this, m.chat, m.sender)
+//await dbProperties(this, m.chat, m.sender)
 let bot = global.db.data.bot[this.user.jid];
 if (typeof bot !== 'object') {
 global.db.data.bot[this.user.jid] = {};
